@@ -1,7 +1,11 @@
-
+import os
 def collectDataFromTextDoc():
-    with open("Edgar Allan Poe complete works.txt") as f:
-        text = f.read()
-        f.close()
-    return text
+    folderPath = "data/"
+    poemList = []
+    for file in os.listdir(folderPath):
+        with open(os.path.join(folderPath, file), 'r') as f:
+
+            text = f.read()
+            poemList.append(text)
+    return poemList
 

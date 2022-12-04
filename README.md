@@ -10,3 +10,4 @@ Two ways to customize pretrained model:
 2. Fine tuning - in addition to adding new layers, unfreeze the few top layers (ie the latest laters) and update their weights as well. Thus, you fine tune te model for the specific task. However, leave the earlier layers as is. 
 
 Why fine tune?: Later layers in the network more specific to the task at hand, whereas earlier layers are more general about language and words. thus, we want to tune the model to our specific task. 
+
