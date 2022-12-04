@@ -4,6 +4,7 @@ from preprocess import *
 from collectData import collectDataFromTextDoc
 from transformers import TFGPT2Model, GPT2Tokenizer
 import random
+from GPT2 import GPT2
 vocabSize = 2048
 embedSize = 1000
 textCorpus = get_data_poems("data/")
@@ -50,7 +51,7 @@ print(decodeString)
 
 #model with weights
 print("before model")
-model = TFGPT2Model.from_pretrained('gpt2')
+model = GPT2()
 print(model.summary())
 optimizer = tf.keras.optimizers.Adam()
 model.compile(optimizer)
