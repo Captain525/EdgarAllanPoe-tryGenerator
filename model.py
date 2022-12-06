@@ -48,11 +48,25 @@ decodeString = tokenizer.decode(input_ids, clean_up_tokenization_spaces = True)
 
 print(decodeString)
 #configuration = GPT2Config(vocab_size = vocabSize, n_positions = 2048, n_embd= embedSize, n_layer = 12, n_head = 12, n_inner = None, activation_function = "relu")
+poemList = []
+for poem in textCorpus:
+
+    poemList.append(merge_lines(poem, True, None))
+tokenizedDataDict = tokenizeDataset(poemList, tokenizer, True, False)
+tokenizedInput = tokenizedDataDict['input_ids']
+tokenizedLabels = tokenizedDataDict['labels']
+attentionMask = tokenizedDataDict['attention_mask']
 
 #model with weights
 print("before model")
-model = GPT2()
+print("sequence size: ", tokenizedInput.shape[1])
+model = GPT2(50257, tokenizedInput.shape[1]+1, embeddingSize = 768, nLayers = 12, nHead = 12, nInner = 4*768)
+print(tokenizedInput[0:5])
+model.build([[None, tokenizedInput.shape[1]], [None, tokenizedLabels.shape[1]]])
+print("after model")
 print(model.summary())
-optimizer = tf.keras.optimizers.Adam()
+
+optimizer = tf.keras.optimizers.Adam(learning_rate = .01)
 model.compile(optimizer)
-model.fit(tokenizedText)
+print(tokenizedInput.shape, tokenizedLabels.shape)
+model.fit(tokenizedInput, tokenizedLabels, 10, 20)

@@ -1,6 +1,9 @@
 import numpy as np
 import os
 import string
+import tensorflow as tf
+from datasets import Dataset
+
 
 def get_data(path='../data'):
     """
@@ -162,3 +165,22 @@ def reverseLineOrder(input_ids, use_bos, tokenizer, reverse_last_line = False):
         new_input_ids[start:] = tmp_input_ids[start:]
     new_input_ids = np.concatenate([input_ids[:init], new_input_ids], axis=0)
     return new_input_ids.astype(np.int32)
+
+def tokenizeDataset( batch, tokenizer, use_bos, reverse):
+    """
+    Takes in a batch of the dataset, then 
+    """
+    if not reverse:
+        batch = tokenizer(batch, padding = "longest", return_tensors = "tf")
+    else:
+        batch = tokenizer(batch, padding = "longest", return_tensors = "np")
+        for i, input_ids in enumerate(batch['input_ids']):
+            batch['input_ids'][i] = reverseLineOrder(batch['input_ids'][i], use_bos = use_bos, tokenizer = tokenizer)
+        batch['input_ids'] = tf.convert_to_tensor(batch['input_ids'])
+        batch['attention_mask'] = tf.convert_to_tensor(batch['attention_mask'])
+    #pytorch code has clone(batch.detach())#
+    #check this is right. 
+    #identity meant to make a copy, stop gradients meant to replicate detach. 
+    batch['labels'] = tf.identity(tf.stop_gradient(batch['input_ids']))
+    return batch
+
