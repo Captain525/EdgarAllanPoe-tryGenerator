@@ -55,6 +55,45 @@ def get_data_lines(path = '../data'):
                 assert(1==0)
             output_lst.append(line)
     return output_lst
+def splitPoem(poemText):
+    """
+    Split a poem which is too large into smaller chunks. 
+    """
+    #listPoemParts = poemText.split(".")
+    listIfPeriod = ["." in line for line in poemText]
+    indicesTrueList = [0] + [i+1 for i,value in enumerate(listIfPeriod) if value == True]
+    listSubPoems = []
+    for i in range(0, len(indicesTrueList)-1):
+        index = indicesTrueList[i]
+        nextIndex = indicesTrueList[i+1]
+       
+        subList = poemText[index:nextIndex]
+        if(len(subList) == 0):
+            print("zero length")
+            continue
+        listSubPoems.append(subList)
+    endPortion = poemText[indicesTrueList[-1]:]
+    listSubPoems.append(endPortion)
+    sumSubListLengths = sum(len(subpoem) for subpoem in listSubPoems) 
+    print("sum sublist lengths: ", sumSubListLengths)
+    print("poem text length: ", len(poemText))
+    print(listSubPoems)
+    print(poemText)
+    assert(sumSubListLengths == len(poemText))
+ 
+    #want lines after the poem part to split into separate poems. 
+    poemList = []
+    for poem in listSubPoems:
+        newLength = len(merge_lines(poem, True, None))
+        if(newLength>1024):
+            #just don't include it in the final result. 
+
+            print("TOO BIG: ", newLength )
+            continue
+        else:
+            poemList.append(poem)
+    return poemList
+
 def get_data_poems(path = '.../data'):
     """
     Gets data as a list of poems, where each poem is 
@@ -66,7 +105,11 @@ def get_data_poems(path = '.../data'):
         poem_path = os.path.join(path, file)
         with open(poem_path, 'r') as poem:
             poem_text = poem.readlines()
-        poem_lst.append(poem_text)
+            if(len(merge_lines(poem_text, True, None))>1024):
+                listParts = splitPoem(poem_text)
+                poem_lst = poem_lst + listParts
+            else:
+                poem_lst.append(poem_text)
     
     output_lst = []
     for poem in poem_lst:
@@ -171,9 +214,11 @@ def tokenizeDataset( batch, tokenizer, use_bos, reverse):
     Takes in a batch of the dataset, then 
     """
     if not reverse:
-        batch = tokenizer(batch, padding = "longest", return_tensors = "tf")
+        
+        
+        batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "tf")
     else:
-        batch = tokenizer(batch, padding = "longest", return_tensors = "np")
+        batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "np")
         for i, input_ids in enumerate(batch['input_ids']):
             batch['input_ids'][i] = reverseLineOrder(batch['input_ids'][i], use_bos = use_bos, tokenizer = tokenizer)
         batch['input_ids'] = tf.convert_to_tensor(batch['input_ids'])
