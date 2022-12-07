@@ -55,7 +55,7 @@ poemList = []
 #for poem in textCorpus:
 
     #poemList.append(merge_lines(poem, True, None))
-tokenizedDataDict = tokenizeDataset(poemList, tokenizer, True, False)
+tokenizedDataDict = tokenizeDataset(textCorpus, tokenizer, True, False)
 tokenizedInput = tokenizedDataDict['input_ids']
 tokenizedLabels = tokenizedDataDict['labels']
 attentionMask = tokenizedDataDict['attention_mask']
@@ -69,7 +69,7 @@ print("sequence size: ", tokenizedInput.shape[1])
 model = GPT2(50257, tokenizedInput.shape[1], embeddingSize = 768, nLayers = 12, nHead = 12, nInner = 4*768, tokenizer = tokenizer)
 print(tokenizedInput[0:5])
 #model.build([[None, tokenizedInput.shape[1], attentionMask.shape], [None, tokenizedLabels.shape[1]]])
-model.build([tokenizedInput[0:5].shape, None, attentionMask[0:5].shape, None, None, None, None, None, None, None, None, None, None, False, tokenizedLabels[0:5].shape])
+model.build([tokenizedInput[0:5].shape, attentionMask[0:5].shape])
 model.run_eagerly = True
 print("after model")
 print(model.summary())

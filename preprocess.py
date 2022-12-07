@@ -127,7 +127,12 @@ def get_data_poems(path = '.../data'):
             lineList.append(line)
         output_lst.append(lineList)
     return output_lst
-
+def mergePoems(poems):
+    poemList = []
+    for poem in poems:
+        newPoem = merge_lines(poem, True, None)
+        poemList.append(newPoem)
+    return poemList
 def merge_lines(lines, use_bos, order = None):
     """
     Input is a list of "line" strings. 
@@ -213,8 +218,10 @@ def tokenizeDataset( batch, tokenizer, use_bos, reverse):
     """
     Takes in a batch of the dataset, then 
     """
+    tokenizer.pad_token_id = tokenizer.eos_token_id
     if not reverse:
         
+
         
         batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "tf")
     else:
