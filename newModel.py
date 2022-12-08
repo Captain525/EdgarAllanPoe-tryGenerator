@@ -8,7 +8,7 @@ from GPT2FineTune import GPT2FineTune
 
 text = get_data_poems("data/")
 #print("text corpus: ", text[0:10])
-#NO SPECIAL TOKENS. 
+#NO SPECIAL TOKENS. THIS BREAKS EVERYTHING. 
 special_tokens = {
     "sep_token": "<LINE>",
     "pad_token": "<PAD>", 
@@ -26,7 +26,8 @@ encodedText = tokenizeDataset(poems, tokenizer, True, False)
 #print("encoded Text variable: ", encodedText)
 adam = tf.keras.optimizers.Adam()
 model.compile(adam)
-dataset = tf.data.Dataset.from_tensor_slices((encodedText['input_ids'], encodedText['attention_mask'], encodedText['labels']))
+#dataset = tf.data.Dataset.from_tensor_slices((encodedText['input_ids'], encodedText['attention_mask'], encodedText['labels']))
 inputDict = {"input_ids": encodedText['input_ids'], "attention_mask":encodedText['attention_mask'], "labels":encodedText['labels']}
-model.fit(encodedText['input_ids'], epochs = 1, batch_size = 2)
+#only put in the ids rn, maybeput in more stuff later, but itll be hard to get it to work. 
+model.fit(encodedText['input_ids'], epochs = 3, batch_size = 2)
 
