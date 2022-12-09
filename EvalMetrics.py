@@ -3,6 +3,13 @@ from spacy.tokenizer import tokenizer
 import string as string_utils
 import pronouncing
 from collections import Counter
+import tensorflow as tf
+class Perplexity(tf.keras.Metrics.Mean):
+    def __init__(self):
+
+
+
+    
 
 def rhymingDistance(poem):
     """

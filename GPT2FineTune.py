@@ -1,5 +1,6 @@
 import tensorflow as tf
 from transformers import TFGPT2Model, TFGPT2LMHeadModel, GPT2Config
+from BeamSearch import generatorHelp
 class GPT2FineTune(tf.keras.Model):
     def __init__(self, vocab_size):
         super().__init__()
@@ -53,7 +54,34 @@ class GPT2FineTune(tf.keras.Model):
         #apply dense layer to that hidden state. 
         logits= self.dense(lastHiddenState)
         return logits
+    def generate(self, input_ids, max_length):
+        result = generatorHelp(self, input_ids, max_length)
+        return result
+    """
+    def generate(self, input_ids, max_length):
+        #if no input, just have it be ONE token, that being the BOS token. 
+        if input_ids is None: 
+            input_ids = tf.fill((1, 1), bos_token_id)
+        #set the attention mask if there wasn't one already. Set it equal to just being 0 where pad tokens are. 
+        attention_mask = tf.cast(tf.math.not_equal(input_ids, pad_token_id), dtype=tf.int32)
+        #generated = self(input_ids)
 
+       # output = self.transformerBlock.generate(input_ids, max_length)
+
+        #is there a 0 encoded in vocab size? 
+        #maxValues = tf.argmax(generated, axis = -1)#+ 1
+        return output
+    
+
+        #NOT USING OTHER BLOCKS YET. 
+        return generated
+        """
+    def greedySearch():
+        return 
+
+
+    def beamSearch():
+        return 
     def batch_step(self, inputs, training):
         """
         """
@@ -70,5 +98,8 @@ class GPT2FineTune(tf.keras.Model):
     def test_step(self, inputs):
         return self.batch_step(inputs, False)
     def resize_token_embeddings(self, size):
+        """
+        Doesn't really work and allow us to add tokens to the vocabulary. 
+        """
         self.transformerBlock.resize_token_embeddings(size)
         print("done")
