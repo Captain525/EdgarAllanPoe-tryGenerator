@@ -33,8 +33,10 @@ inputDict = {"input_ids": encodedText['input_ids'], "attention_mask":encodedText
 #model.fit(encodedText['input_ids'][0:1000], epochs = 1, batch_size = 2)
 encodedPrompt = tf.convert_to_tensor(tokenizer.encode("It was a dark and stormy night"), dtype = tf.int32)[ tf.newaxis, ...]
 print(encodedPrompt)
-generatedText = model.generate(encodedPrompt, max_length = 20)[0]
+#output = model(encodedPrompt)
+generatedText = model.generate(encodedPrompt, max_length = 20, bos_token_id = tokenizer.bos_token_id, eos_token_id = tokenizer.eos_token_id, pad_token_id = tokenizer.pad_token_id,)
 print("generated text encoded: ", generatedText)
+generatedText= list(generatedText[0])
 decoded = tokenizer.decode(generatedText)
 print("decoded text: ", decoded)
 
