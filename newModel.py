@@ -1,7 +1,8 @@
 import tensorflow as tf
 from preprocess import *
-from collectData import collectDataFromTextDoc
+
 from transformers import TFGPT2LMHeadModel, GPT2Tokenizer, GPT2Config
+from generate import *
 import random
 from GPT2FineTune import GPT2FineTune
 
@@ -30,13 +31,22 @@ model.compile(adam)
 #dataset = tf.data.Dataset.from_tensor_slices((encodedText['input_ids'], encodedText['attention_mask'], encodedText['labels']))
 inputDict = {"input_ids": encodedText['input_ids'], "attention_mask":encodedText['attention_mask'], "labels":encodedText['labels']}
 #only put in the ids rn, maybeput in more stuff later, but itll be hard to get it to work. 
-#model.fit(encodedText['input_ids'][0:1000], epochs = 1, batch_size = 2)
-encodedPrompt = tf.convert_to_tensor(tokenizer.encode("It was a dark and stormy night"), dtype = tf.int32)[ tf.newaxis, ...]
-print(encodedPrompt)
+print("got to fit")
+model.fit((encodedText['input_ids'][0:100], encodedText['attention_mask'][0:100]), epochs = 1, batch_size = 2)
+model.save_weights("weights")
+listPhrases = ["It was a dark and stormy night", "I hated to hear the sound of my beating heart"]
+
+encodedPrompt = tokenizeDataset(listPhrases, tokenizer, True, True)
+
+#promptBatch = tf.concat([encodedPrompt, encodedPrompt2], axis=0)
+print("encodedPRompt: ", encodedPrompt)
 #output = model(encodedPrompt)
-generatedText = model.generate(encodedPrompt, max_length = 20, bos_token_id = tokenizer.bos_token_id, eos_token_id = tokenizer.eos_token_id, pad_token_id = tokenizer.pad_token_id,)
+generatedText = model.generate(encodedPrompt['input_ids'],max_length = 30, bos_token_id = tokenizer.bos_token_id, eos_token_id = tokenizer.eos_token_id, pad_token_id = tokenizer.pad_token_id,)
+
 print("generated text encoded: ", generatedText)
-generatedText= list(generatedText[0])
-decoded = tokenizer.decode(generatedText)
+
+decoded =batch_decode(generatedText, tokenizer, True, True, False)
 print("decoded text: ", decoded)
+generatedNoPrompt = model.generate(None, max_length = 20, bos_token_id = tokenizer.bos_token_id, eos_token_id = tokenizer.eos_token_id, pad_token_id = tokenizer.pad_token_id)
+
 

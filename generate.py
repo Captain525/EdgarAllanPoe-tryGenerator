@@ -20,11 +20,11 @@ def batch_decode(outputs, tokenizer, use_bos, reverse, reverse_last_line):
             print("output shape: ", output.shape)
             reversed.append(output)
         outputs = tf.stack(reversed, axis=0)
-        assert(outputs.shape == (len(reversed), output.shape ))
+        assert(outputs.shape == (len(reversed), output.shape[-1]))
     else:
         outputs = tf.stack(outputs, axis=0)
 
-    outputs = tokenizer.batch_decode(outputs, skip_special_tokens = False)
+    outputs = tokenizer.batch_decode(outputs, skip_special_tokens = True)
     return outputs
 def count_lines(prompt):
     return len(prompt.strip().split("\n"))
@@ -107,9 +107,9 @@ def generate_lines(model, tokenizer, device, use_bos, reverse, order, prompts, g
 def generate_poems(model, tokenizer, device, use_bos, reverse, order, prompts, generate_params, num_generation, batch_size, add_line_token):
         return generate_both(model,tokenizer, device, use_bos, reverse, order, prompts, generate_params, num_generation, batch_size, add_line_token, False)
 def generate_new_lines(model, tokenizer, config, prompts, generate_params, num_generation, batch_size):
-    return generate_lines(model, tokenizer, config, prompts, generate_params, new_generation, batch_size, True)
+    return generate_lines(model, tokenizer, config, prompts, generate_params, num_generation, batch_size, True)
 def finish_lines(model, tokenizer, config, prompts, generate_params, num_generation, batch_size):
-    return generate_lines(model, tokenizer, config, prompts, generate_params, new_generation, batch_size, False)
+    return generate_lines(model, tokenizer, config, prompts, generate_params, num_generation, batch_size, False)
 def generate_poems_two_stage(standard_lm, reverse_lm, standard_tokenizer, reverse_tokenizer, standard_config, reverse_config, prompts, generate_params, num_generation_1 = 10, num_generation_2 = 1, batch_size = 64):
     first_lines = finish_lines(model = standard_lm, tokenizer = standard_tokenizer,config = standard_config , prompts = prompts, generate_params = generate_params, num_generation = num_generation_1, batch_size = batch_size)
 
@@ -121,7 +121,7 @@ def get_last_words(prompt):
 def pad_tokens(tokens, tokenizer, max_len):
     return
 def get_rhyming_word_score(reverse_lm, tokenizer, config, prompts, rhymes, temperature, batch_size = 64):
-
+    return
 def generate_poems_two_stage_with_rhyming(standard_lm, reverse_lm, standard_tokenizer, reverse_tokenizer, standard_config, reverse_config, prompts, generate_params, weighted, num_generation_1 = 10, num_generation_2 = 1, batch_size = 1):
      lines = finish_lines(
         model=standard_lm,
@@ -149,4 +149,3 @@ def generate_poems_two_stage_with_rhyming(standard_lm, reverse_lm, standard_toke
             num_generation=1,
             batch_size=batch_size)
      return lines
-def 

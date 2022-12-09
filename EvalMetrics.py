@@ -1,11 +1,15 @@
 from spacy.lang.en import English
-from spacy.tokenizer import tokenizer
+#from spacy.tokenizer import tokenizer
 import string as string_utils
-import pronouncing
+#import pronouncing
 from collections import Counter
 import tensorflow as tf
-class Perplexity(tf.keras.Metrics.Mean):
-    def __init__(self):
+def perplexity(probs, text):
+    text = text[:, 1:]
+    probs = probs[:, :-1, :]
+    entropyLoss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = False)(text, probs)
+    perplexity = tf.exp(tf.math.log(2.0)*entropyLoss)
+    return perplexity
 
 
 

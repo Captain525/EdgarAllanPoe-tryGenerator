@@ -221,11 +221,9 @@ def tokenizeDataset( batch, tokenizer, use_bos, reverse):
     tokenizer.pad_token_id = tokenizer.eos_token_id
     if not reverse:
         
-
-        
-        batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "tf")
+        batch = tokenizer(batch, padding = "longest", return_tensors = "tf")
     else:
-        batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "np")
+        batch = tokenizer(batch, padding = "longest", return_tensors = "np")
         for i, input_ids in enumerate(batch['input_ids']):
             batch['input_ids'][i] = reverseLineOrder(batch['input_ids'][i], use_bos = use_bos, tokenizer = tokenizer)
         batch['input_ids'] = tf.convert_to_tensor(batch['input_ids'])
