@@ -3,7 +3,9 @@ from transformers import TFGPT2Model, TFGPT2LMHeadModel, GPT2Config, PreTrainedM
 
 import numpy as np
 from EvalMetrics import perplexity
+from EvalMetrics import perplexity
 class GPT2FineTune(tf.keras.Model):
+    def __init__(self, vocab_size, loadWeightsPath=None):
     def __init__(self, vocab_size, loadWeightsPath=None):
         super().__init__()
         
@@ -23,6 +25,7 @@ class GPT2FineTune(tf.keras.Model):
        
    
         self.vocab_size = vocab_size
+
 
         self.dense = tf.keras.layers.Dense(vocab_size, "softmax")
         self.tail = tf.keras.models.Sequential([self.dense])
@@ -60,7 +63,7 @@ class GPT2FineTune(tf.keras.Model):
   
         return loss
 
-    def call(self, inputs, training):
+    def call(self, inputs, training, attention_mask=None,):
         """
         inputs right now is JUST the training ids, no mask or labels. 
         This is shape batchSize x sequenceSize, each element is an tokenized word. 
@@ -96,12 +99,20 @@ class GPT2FineTune(tf.keras.Model):
         Generate a new sequence by sampling randomly from the outputted probability distribution from the model. 
         Iterate through the sequence, generating one new word each time.
         """
+
+    def getGeneratedText(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id, sample):
+        """
+        Generate a new sequence by sampling randomly from the outputted probability distribution from the model. 
+        Iterate through the sequence, generating one new word each time.
+        """
         if input_ids is None: 
             input_ids = tf.fill((1, 1), bos_token_id)
         attention_mask = tf.cast(tf.math.not_equal(input_ids, pad_token_id), dtype=tf.int32)
         batchSize = input_ids.shape[0]
+        batchSize = input_ids.shape[0]
         #generating text AFTER the input sequence. 
         concatSequence= input_ids
+        sequenceEnd = tf.ones(shape = (batchSize, ), dtype = tf.int32)
         sequenceEnd = tf.ones(shape = (batchSize, ), dtype = tf.int32)
         maskBos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == bos_token_id), tf.float32)
         previousGuesses = eos_token_id *tf.ones((batchSize, ), dtype = tf.int32)
@@ -173,6 +184,7 @@ class GPT2FineTune(tf.keras.Model):
             loss = self.compute_loss(logits, inputs[0], inputs[1])
         if training:
             print("in gradient computation")
+            print("in gradient computation")
             grad = tape.gradient(loss, self.trainable_variables)
             self.optimizer.apply_gradients(zip(grad, self.trainable_variables))
         perplexityVal = perplexity(logits, inputs[0], inputs[1])
@@ -191,6 +203,14 @@ class GPT2FineTune(tf.keras.Model):
         """
         self.transformerBlock.resize_token_embeddings(size)
         print("done")
+    def save_weights(self, path):
+        self.head.save_weights(path + "/head")
+        self.tail.save_weights(path + "/tail")
+        return 
+    def load_weights(self, path):
+        self.head.load_weights(path + "/head")
+        self.tail.load_weights(path + "/tail")
+        return 
     def save_weights(self, path):
         self.head.save_weights(path + "/head")
         self.tail.save_weights(path + "/tail")

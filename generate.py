@@ -131,6 +131,7 @@ def pad_tokens(tokens, tokenizer, max_len):
     return
 def get_rhyming_word_score(reverse_lm, tokenizer, config, prompts, rhymes, temperature, batch_size = 64):
     return
+    return
 def generate_poems_two_stage_with_rhyming(standard_lm, reverse_lm, standard_tokenizer, reverse_tokenizer, standard_config, reverse_config, prompts, generate_params, weighted, num_generation_1 = 10, num_generation_2 = 1, batch_size = 1):
      lines = finish_lines(
         model=standard_lm,
