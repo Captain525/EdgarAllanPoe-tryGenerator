@@ -6,7 +6,6 @@ from EvalMetrics import perplexity
 from EvalMetrics import perplexity
 class GPT2FineTune(tf.keras.Model):
     def __init__(self, vocab_size, loadWeightsPath=None):
-    def __init__(self, vocab_size, loadWeightsPath=None):
         super().__init__()
         
 
@@ -94,11 +93,7 @@ class GPT2FineTune(tf.keras.Model):
         generated = self.getGeneratedText(input_ids, min_length, max_length, bos_token_id, eos_token_id, pad_token_id, True)
         return generated
 
-    def getGeneratedText(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id, sample):
-        """
-        Generate a new sequence by sampling randomly from the outputted probability distribution from the model. 
-        Iterate through the sequence, generating one new word each time.
-        """
+
 
     def getGeneratedText(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id, sample):
         """
@@ -183,7 +178,6 @@ class GPT2FineTune(tf.keras.Model):
             #add mask to calculation. 
             loss = self.compute_loss(logits, inputs[0], inputs[1])
         if training:
-            print("in gradient computation")
             print("in gradient computation")
             grad = tape.gradient(loss, self.trainable_variables)
             self.optimizer.apply_gradients(zip(grad, self.trainable_variables))

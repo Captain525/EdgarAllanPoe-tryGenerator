@@ -4,7 +4,6 @@ from postprocess import Postprocessing
 
 from transformers import TFGPT2LMHeadModel, GPT2Tokenizer, GPT2Config
 from generate import *
-from generate import *
 import random
 from GPT2FineTune import GPT2FineTune
 from metrics import Metrics
@@ -70,15 +69,6 @@ adam = tf.keras.optimizers.Adam()
 model.compile(adam, metrics = [tf.keras.metrics.Mean(name = "perplexity")])
 #model.run_eagerly = True
 #only put in the ids rn, maybeput in more stuff later, but itll be hard to get it to work. 
-#model.fit(encodedText['input_ids'][0:1000], epochs = 1, batch_size = 2)
-encodedPrompt = tf.convert_to_tensor(tokenizer.encode("It was a dark and stormy night"), dtype = tf.int32)[ tf.newaxis, ...]
-print(encodedPrompt)
-#output = model(encodedPrompt)
-generatedText = model.generate(encodedPrompt, max_length = 20, bos_token_id = tokenizer.bos_token_id, eos_token_id = tokenizer.eos_token_id, pad_token_id = tokenizer.pad_token_id,)
-print("generated text encoded: ", generatedText)
-generatedText= list(generatedText[0])
-decoded = tokenizer.decode(generatedText)
-print("decoded text: ", decoded)
 
 evaluatePoemGeneration(model, tokenizer)
 model.fit((trainData, trainMask), epochs = 5, batch_size =2, validation_data = (valData[0:100], valMask[0:100]))
