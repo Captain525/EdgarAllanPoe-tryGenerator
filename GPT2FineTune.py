@@ -1,26 +1,38 @@
 import tensorflow as tf
 from transformers import TFGPT2Model, TFGPT2LMHeadModel, GPT2Config, PreTrainedModel
-from BeamSearch import generatorHelp
+
 import numpy as np
+from EvalMetrics import perplexity
 class GPT2FineTune(tf.keras.Model):
-    def __init__(self, vocab_size):
+    def __init__(self, vocab_size, loadWeightsPath=None):
         super().__init__()
-        hidden_size = 100
+        
+
+        """
+        Before, using sequential model sfor the head and tail caused everything to break, now it doesn't. 
+
+        I think it might be LMHeadModel vs just normal model. LMHeadModel causes it to crash maybe. 
+        """
         self.embedding = tf.keras.layers.Embedding(vocab_size, 768)
-        self.embedDense = tf.keras.layers.Dense(768, "relu")
-       
-        self.transformerBlock = TFGPT2LMHeadModel.from_pretrained("gpt2")
-        self.transformerBlock.resize_token_embeddings(vocab_size)
+        #self.embedDense = tf.keras.layers.Dense(768, "relu")
+        self.head = tf.keras.models.Sequential([self.embedding])
+        self.transformerBlock = TFGPT2Model.from_pretrained("gpt2")
+        
         #want transformerBlock TO NOT TRAIN. TOO MUCH MEMORY REQUIRED, WE WANT TO FINE TUNE IT. 
         self.transformerBlock.trainable = False
+       
    
         self.vocab_size = vocab_size
-    
+
         self.dense = tf.keras.layers.Dense(vocab_size, "softmax")
+        self.tail = tf.keras.models.Sequential([self.dense])
+        
         #loss function here. 
         self.lossCalc = tf.keras.losses.SparseCategoricalCrossentropy(from_logits = False)
-
-    def compute_loss(self, logits, labels):
+        self.perplexity = tf.keras.metrics.Mean("perplexity")
+        if loadWeightsPath is not None: 
+            self.load_weights(loadWeightsPath)
+    def compute_loss(self, logits, labels, mask):
         """
         labels is just the input sequence rn. 
         logits are the probabilities(not normalized) given to each one. 
@@ -35,14 +47,15 @@ class GPT2FineTune(tf.keras.Model):
 
         assert(labels.shape == (batchSize, sequenceSize))
         assert(logits.shape == (batchSize, sequenceSize, vocabSize))
-        print("labels before: ", labels)
+        
         labels = labels[:, 1:]
         logits= logits[:,:-1, :]
-        print("labels after: " , labels)
+        mask = mask[:, 1:]
+        
         
         #true then predicted. 
         #gets loss as one value instead of as a batch. 
-        loss = self.lossCalc(labels, logits)
+        loss = self.lossCalc(labels, logits, mask)
         
   
         return loss
@@ -52,128 +65,123 @@ class GPT2FineTune(tf.keras.Model):
         inputs right now is JUST the training ids, no mask or labels. 
         This is shape batchSize x sequenceSize, each element is an tokenized word. 
         """
-        bs = inputs.shape[0]
-        sequenceSize = inputs.shape[1]
-
-        embeddedInputs = self.embedding(inputs)
-        outputs = self.transformerBlock(None, inputs_embeds = embeddedInputs)
+        text = inputs[0]
+        attention_mask = inputs[1]
+        bs = text.shape[0]
+        sequenceSize = text.shape[1]
+        
+        maskedText = attention_mask * text
+        #maskedText = texts
+        embeddedInputs = self.head(maskedText)
+        outputs = self.transformerBlock(None, inputs_embeds = embeddedInputs, attention_mask = attention_mask)
         #get just the last hidden state of the outputs. 
         lastHiddenState = outputs[0]
-        #print(lastHiddenState.shape)
-        #assert(lastHiddenState.shape == (bs, sequenceSize,768))
-        #apply dense layer to that hidden state. 
-        logits= self.dense(lastHiddenState)
+     
+        probs = self.tail(lastHiddenState)
+        #probs = tf.nn.softmax(lastHiddenState, axis=-1)
+ 
+        return probs
 
-        return logits
-    def generate(self, input_ids, max_length, bos_token_id, eos_token_id, pad_token_id):
+    def generate(self, input_ids, min_length, max_length, bos_token_id, eos_token_id, pad_token_id):
       
             
         #set the attention mask if there wasn't one already. Set it equal to just being 0 where pad tokens are. 
         
-        #generated = self(input_ids)
-        generated = self.greedySearch(input_ids, 10, max_length, bos_token_id, eos_token_id, pad_token_id)
+
+        generated = self.getGeneratedText(input_ids, min_length, max_length, bos_token_id, eos_token_id, pad_token_id, True)
         return generated
 
-        
-    def greedySearch(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id):
-        #output size is equal to the input size so we should just put in one at a time. 
+    def getGeneratedText(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id, sample):
+        """
+        Generate a new sequence by sampling randomly from the outputted probability distribution from the model. 
+        Iterate through the sequence, generating one new word each time.
+        """
         if input_ids is None: 
             input_ids = tf.fill((1, 1), bos_token_id)
         attention_mask = tf.cast(tf.math.not_equal(input_ids, pad_token_id), dtype=tf.int32)
-       
+        batchSize = input_ids.shape[0]
         #generating text AFTER the input sequence. 
         concatSequence= input_ids
-        sequenceEnd = tf.ones(shape = (input_ids.shape[0], ), dtype = tf.int32)
+        sequenceEnd = tf.ones(shape = (batchSize, ), dtype = tf.int32)
         maskBos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == bos_token_id), tf.float32)
+        previousGuesses = eos_token_id *tf.ones((batchSize, ), dtype = tf.int32)
+        comparison = tf.tile(tf.range(0, self.vocab_size, 1)[tf.newaxis, ...], multiples = (batchSize, 1))
+        assert(comparison.shape == (batchSize, self.vocab_size))
+        assert(maskBos[bos_token_id] == 0)
+
         maskEos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == eos_token_id), tf.float32)
-        print(tf.range(0, self.vocab_size, 1)[-1])
-        print("eos token id: ", eos_token_id)
+        assert(maskEos[eos_token_id] == 0)
+      
+        
         maskPad = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == pad_token_id), tf.float32)
-        print("Eos pad: ", maskEos)
-        assert(maskEos[-1] == 0)
+       
+        assert(maskPad[pad_token_id] == 0)
       
         for i in range(0, max_length):
             
-            logits = tf.nn.softmax(self.transformerBlock(concatSequence)[0], axis = -1)
-         
-        
-            assert(logits.shape == (concatSequence.shape[0], concatSequence.shape[1], self.vocab_size))
+            attention_mask =tf.cast(tf.math.not_equal(concatSequence, pad_token_id), dtype=tf.int32)
+            previous_guess_mask = tf.cast(tf.math.not_equal(comparison, previousGuesses), dtype = tf.float32)
+           # logits = tf.nn.softmax(self.transformerBlock(concatSequence, attention_mask = attention_mask)[0], axis = -1)
+            logits = self((concatSequence,  attention_mask))
+            assert(logits.shape == (batchSize, concatSequence.shape[1], self.vocab_size))
             
             #get the max of the LAST logits. 
             #try batch size of one. 
-            log = logits[:, -1]
-            log = log*maskBos
+            log = logits[:, -1, :]
+            log = log*previous_guess_mask
+            assert(log.shape == (batchSize, self.vocab_size))
+            #log = log*maskBos
             log = log*maskPad
             #make it so can't get the end token if less than minimum length. 
             if i<min_length: 
-        
                 log = log*maskEos
-          
-            #if sequence has already ended, just add padding tokens as next guess. If not, (sequenceEnd element = 1), then add the newly chosen element. 
-            nextGuess = (tf.argmax(log, axis=-1, output_type = tf.int32)[..., tf.newaxis])*sequenceEnd + pad_token_id*tf.ones(shape = (input_ids.shape[0], 1), dtype = tf.int32)*(not sequenceEnd)
-            concatSequence = tf.concat([concatSequence, nextGuess], axis = -1)
+            if sample: 
+                guessNext = self.randomChoiceProbIndex(log, axis=1)
+                
+            else: 
+                guessNext = tf.argmax(log, axis=-1, output_type = tf.int32)
 
-            #makes a value 0 (ie already reached end of sequence) if either it was already 0 or the new next guess == eos_token_id. 
-            sequenceEnd =tf.cast(tf.math.logical_and((not (nextGuess == eos_token_id)), tf.cast(sequenceEnd, bool)), tf.int32)
-        #sequence is size initial sequence + added stuff, basicaly generated new stuff this way. 
+            assert(guessNext.shape == (batchSize,))
+            chosenIndices = tf.where(tf.cast(sequenceEnd, tf.bool), guessNext, pad_token_id*tf.ones((batchSize, ), dtype = tf.int32))
+            #record the previous guesses so they can't guess the same thing 2 times in a row. 
+            previousGuesses = guessNext
+            #add newly chosen indices to this new bunch. 
+            concatSequence = tf.concat([concatSequence, chosenIndices[..., tf.newaxis]], axis=-1)
+            #reevaluate whether each sequence has ended or not. 
+            sequenceEnd =tf.cast(tf.math.logical_and(tf.logical_not(chosenIndices == eos_token_id), tf.cast(sequenceEnd, tf.bool)), tf.int32)
+            
         return concatSequence
+    def randomChoiceProbIndex(self, probs, axis=1):
+        """
+        Taking in a 2d tensor probs of size batchSize x vocabSize (doesn't necessarily add to one though), it 
+        samples randomly an index according to that probability distribution. 
+        """
+        #renormalize to one
+        probs = tf.nn.softmax(probs, axis=-1)
+        r = tf.expand_dims(tf.random.uniform(shape = (probs.shape[1-axis], )), axis=axis)
+        return tf.cast(tf.argmax(tf.math.cumsum(probs, axis=axis)>r, axis=axis), tf.int32)
 
-    def sample(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id):
-        if input_ids is None: 
-            input_ids = tf.fill((1, 1), bos_token_id)
-        attention_mask = tf.cast(tf.math.not_equal(input_ids, pad_token_id), dtype=tf.int32)
-       
-        #generating text AFTER the input sequence. 
-        concatSequence= input_ids
-        sequenceEnd = tf.ones(shape = (input_ids.shape[0], ), dtype = tf.int32)
-        maskBos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == bos_token_id), tf.float32)
-        maskEos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == eos_token_id), tf.float32)
-        print(tf.range(0, self.vocab_size, 1)[-1])
-        print("eos token id: ", eos_token_id)
-        maskPad = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == pad_token_id), tf.float32)
-        print("Eos pad: ", maskEos)
-        assert(maskEos[-1] == 0)
-      
-        for i in range(0, max_length):
-            
-            logits = tf.nn.softmax(self.transformerBlock(concatSequence)[0], axis = -1)
-            assert(logits.shape == (concatSequence.shape[0], concatSequence.shape[1], self.vocab_size))
-            
-            #get the max of the LAST logits. 
-            #try batch size of one. 
-            log = logits[:, -1]
-            log = log*maskBos
-            log = log*maskPad
-            #make it so can't get the end token if less than minimum length. 
-            if i<min_length: 
-        
-                log = log*maskEos
-            randomValues = tf.random.uniform(shape = (concatSequence.shape[0], ))
-    def findBin(randomValues, probs):
-        vocabSize = probs.shape[-1]
-        arrayBin = np.zeros((probs.shape[0],))
-        sum = tf.zeros((probs.shape[0],))
-        chosen = tf.ones((probs.shape[0], ))
-        for i in range(vocabSize):
-            newSum = sum + probs[:, i]
-            #assuming previous step was greater than. 
-            lessThan = randomValues<= newSum
-            
-
-    def beamSearch():
-        return 
     def batch_step(self, inputs, training):
         """
+        Batch step, done in both training and testing. 
         """
+      
         with tf.GradientTape() as tape: 
             logits = self(inputs, training)
             #Use inputs as labels, but will shift it to the right by one and shift the other to the left by one. 
-            loss = self.compute_loss(logits, inputs)
+            #add mask to calculation. 
+            loss = self.compute_loss(logits, inputs[0], inputs[1])
         if training:
+            print("in gradient computation")
             grad = tape.gradient(loss, self.trainable_variables)
             self.optimizer.apply_gradients(zip(grad, self.trainable_variables))
-        return {"loss": loss}
+        perplexityVal = perplexity(logits, inputs[0], inputs[1])
+        self.perplexity.update_state(perplexityVal)
+        
+        return {"loss": loss, "perplexity": self.perplexity.result()}
     def train_step(self, inputs):
+        #accounts for fact that inputs is tuple in tuple for some reason. 
+        inputs = inputs[0]
         return self.batch_step(inputs, True)
     def test_step(self, inputs):
         return self.batch_step(inputs, False)
@@ -183,3 +191,11 @@ class GPT2FineTune(tf.keras.Model):
         """
         self.transformerBlock.resize_token_embeddings(size)
         print("done")
+    def save_weights(self, path):
+        self.head.save_weights(path + "/head")
+        self.tail.save_weights(path + "/tail")
+        return 
+    def load_weights(self, path):
+        self.head.load_weights(path + "/head")
+        self.tail.load_weights(path + "/tail")
+        return 

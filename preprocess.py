@@ -75,10 +75,8 @@ def splitPoem(poemText):
     endPortion = poemText[indicesTrueList[-1]:]
     listSubPoems.append(endPortion)
     sumSubListLengths = sum(len(subpoem) for subpoem in listSubPoems) 
-    print("sum sublist lengths: ", sumSubListLengths)
-    print("poem text length: ", len(poemText))
-    print(listSubPoems)
-    print(poemText)
+  
+ 
     assert(sumSubListLengths == len(poemText))
  
     #want lines after the poem part to split into separate poems. 
@@ -117,7 +115,10 @@ def get_data_poems(path = '.../data'):
         #will add BOS and EOS later. 
         for id, line in enumerate(poem):
             line = line.replace("\n", "").lower()
-            #print(repr(line))
+            #line = line.replace("<", " ")
+            #line = line.replace(">", " ")
+            #line = line.replace("-", " ")
+
             if line == "":
                 continue
             #gets rid of ending punctuation in line. 
@@ -133,6 +134,16 @@ def mergePoems(poems):
         newPoem = merge_lines(poem, True, None)
         poemList.append(newPoem)
     return poemList
+def breakPoemLines(poems):
+    """
+    list of strings, where each string is a line/poem. want to break up each line into strings. 
+    """
+    listSplitPoems = []
+    for poem in poems:
+        poemNew = poem.split(" ")
+        listSplitPoems.append(poemNew)
+    return listSplitPoems
+
 def merge_lines(lines, use_bos, order = None):
     """
     Input is a list of "line" strings. 
@@ -149,6 +160,7 @@ def merge_lines(lines, use_bos, order = None):
         lines = [lines[0] for o in order]
     #merges the lines into one. 
     words = ' <LINE> '.join(lines) + ' <LINE>'
+    #words = " ".join(lines)
     #adds bos if we need to. 
     if(use_bos):
         words = '<BOS> ' + words + ' <EOS>'
@@ -170,7 +182,7 @@ def reorder(lines, order = None):
     return lines
 def reverseLineOrder(input_ids, use_bos, tokenizer, reverse_last_line = False):
     pad_token_id = tokenizer.pad_token_id
-    print(pad_token_id)
+   
     start = 0
     #basically get the starting point of the sequence without padding. 
     for i, id_ in enumerate(input_ids):
@@ -198,9 +210,7 @@ def reverseLineOrder(input_ids, use_bos, tokenizer, reverse_last_line = False):
             #add the sep token at the end. 
             new_input_ids[end] = tokenizer.sep_token_id
             #move on to later words/phrases. 
-        
-            #print(new_input_ids[start:end+1])
-            #print(new_input_ids[start:end+1].shape)
+       
             start = end + 1
     #shoudl end up with start at the beginning of the last line.
     # If we want to reverse it, we can reverse entire ending from start to end.  
@@ -218,14 +228,12 @@ def tokenizeDataset( batch, tokenizer, use_bos, reverse):
     """
     Takes in a batch of the dataset, then 
     """
-    tokenizer.pad_token_id = tokenizer.eos_token_id
+    
     if not reverse:
         
-
-        
-        batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "tf")
+        batch = tokenizer(batch, padding = "longest", return_tensors = "tf")
     else:
-        batch = tokenizer(batch, padding = "max_length", max_length = 1024, return_tensors = "np")
+        batch = tokenizer(batch, padding = "longest", return_tensors = "np")
         for i, input_ids in enumerate(batch['input_ids']):
             batch['input_ids'][i] = reverseLineOrder(batch['input_ids'][i], use_bos = use_bos, tokenizer = tokenizer)
         batch['input_ids'] = tf.convert_to_tensor(batch['input_ids'])
