@@ -16,6 +16,7 @@ class GPT2FineTune(tf.keras.Model):
 
         I think it might be LMHeadModel vs just normal model. LMHeadModel causes it to crash maybe. 
         """
+        
         if self.addEmbedding: 
 
             self.embedding = tf.keras.layers.Embedding(vocab_size, 768)

@@ -49,7 +49,7 @@ def evaluatePoemGeneration(model, tokenizer):
 
 
 loadWeights = False
-addSpecial = True
+addSpecial = False
 text = get_data_poems("data/")
 postprocess= Postprocessing()
 evaluate = Metrics()
@@ -92,8 +92,9 @@ model.compile(adam, metrics = [tf.keras.metrics.Mean(name = "perplexity")])
 if loadWeights:
     evaluatePoemGeneration(model, tokenizer)
 else:
-    model.fit((trainData, trainMask), epochs = 3, batch_size =2, validation_data = (valData, valMask))
+    model.fit((trainData, trainMask), epochs = 10, batch_size =2, validation_data = (valData, valMask))
     model.save_weights("weights")
+    evaluatePoemGeneration(model, tokenizer)
 tokenized = tf.convert_to_tensor(tokenizer("once upon a midnight dreary")['input_ids'], tf.int32)[tf.newaxis, ...]
 print(tokenized)
 generated = model.generate(tokenized, 10, 30, tokenizer.bos_token_id, tokenizer.eos_token_id, tokenizer.pad_token_id)
