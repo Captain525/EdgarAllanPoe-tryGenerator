@@ -23,7 +23,7 @@ def batch_decode(outputs, tokenizer, use_bos, reverse, reverse_last_line):
     else:
         outputs = tf.concat(outputs, axis=0)
     
-    outputs = tokenizer.batch_decode(outputs, skip_special_tokens = False)
+    outputs = tokenizer.batch_decode(outputs, skip_special_tokens = True)
     return outputs
 def count_lines(prompt):
     return len(prompt.strip().split("\n"))

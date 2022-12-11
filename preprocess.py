@@ -115,9 +115,9 @@ def get_data_poems(path = '.../data'):
         #will add BOS and EOS later. 
         for id, line in enumerate(poem):
             line = line.replace("\n", "").lower()
-            #line = line.replace("<", " ")
-            #line = line.replace(">", " ")
-            #line = line.replace("-", " ")
+            line = line.replace("<", " ")
+            line = line.replace(">", " ")
+            line = line.replace("-", " ")
 
             if line == "":
                 continue
@@ -128,10 +128,10 @@ def get_data_poems(path = '.../data'):
             lineList.append(line)
         output_lst.append(lineList)
     return output_lst
-def mergePoems(poems):
+def mergePoems(poems, special):
     poemList = []
     for poem in poems:
-        newPoem = merge_lines(poem, True, None)
+        newPoem = merge_lines(poem, True, None, special)
         poemList.append(newPoem)
     return poemList
 def breakPoemLines(poems):
@@ -144,7 +144,7 @@ def breakPoemLines(poems):
         listSplitPoems.append(poemNew)
     return listSplitPoems
 
-def merge_lines(lines, use_bos, order = None):
+def merge_lines(lines, use_bos, order = None, special = False):
     """
     Input is a list of "line" strings. 
     Output makes it one string but adds line delimiters. 
@@ -159,11 +159,14 @@ def merge_lines(lines, use_bos, order = None):
         assert(sorted(order) == list(range(len(order))))
         lines = [lines[0] for o in order]
     #merges the lines into one. 
-    words = ' <LINE> '.join(lines) + ' <LINE>'
-    #words = " ".join(lines)
+    if(special):
+        words = ' <LINE> '.join(lines) + ' <LINE>'
+    else:
+        words = " ".join(lines)
     #adds bos if we need to. 
-    if(use_bos):
-        words = '<BOS> ' + words + ' <EOS>'
+
+    if(special and use_bos):
+       words = '<BOS> ' + words + ' <EOS>'
      
     words = ' '.join(words.split())
     return words
