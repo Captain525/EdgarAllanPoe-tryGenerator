@@ -7,7 +7,7 @@ class GPT2FineTune(tf.keras.Model):
     def __init__(self, vocab_size, loadWeightsPath=None):
         super().__init__()
         
-        self.addTail = True
+        self.addTail =True
         self.headModel = False
         self.addEmbedding = True
         self.doMask =True

@@ -2,7 +2,7 @@ import numpy as np
 import os
 import string
 import tensorflow as tf
-from datasets import Dataset
+#from datasets import Dataset
 
 
 def get_data(path='../data'):

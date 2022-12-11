@@ -35,7 +35,7 @@ def evaluatePoemGeneration(model, tokenizer):
     lines = generate_lines(model, tokenizer,min_length, max_length, True, False, [None, "Once upon a midnight dreary", "The heart beat beneath the floorboards"], 3, 1, True, tokenizer.bos_token_id, tokenizer.eos_token_id, tokenizer.pad_token_id)
     
     print(lines)
-    #splitPoems = np.array(breakPoemLines(lines), dtype = str)
+   
     splitPoems = breakPoemLines(lines)
     numPoems = len(splitPoems)
     print("split poems: ", splitPoems)
@@ -48,8 +48,8 @@ def evaluatePoemGeneration(model, tokenizer):
     print("lexical diversity: ", avgDiversity)
 
 
-loadWeights = True
-addSpecial = False
+loadWeights = False
+addSpecial = True
 text = get_data_poems("data/")
 postprocess= Postprocessing()
 evaluate = Metrics()
