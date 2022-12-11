@@ -63,16 +63,16 @@ special_tokens = {
 }
 
 tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-
+if addSpecial:
+    tokenizer.add_special_tokens(special_tokens)
+else:
+    tokenizer.pad_token = tokenizer.eos_token
 if loadWeights:
     model = GPT2FineTune(len(tokenizer), "weights/")
 else:
     model = GPT2FineTune(len(tokenizer))
-if addSpecial:
-    tokenizer.add_special_tokens(special_tokens)
-    model.resize_token_embeddings(len(tokenizer))
-else:
-    tokenizer.pad_token = tokenizer.eos_token
+
+
 
 
 poems = mergePoems(text, addSpecial)
@@ -88,8 +88,12 @@ trainData, trainMask, valData, valMask = splitData(input_ids, attention_mask)
 adam = tf.keras.optimizers.Adam()
 model.compile(adam, metrics = [tf.keras.metrics.Mean(name = "perplexity")])
 #model.run_eagerly = True
-#only put in the ids rn, maybeput in more stuff later, but itll be hard to get it to work. 
-evaluatePoemGeneration(model, tokenizer)
+#only put in the ids rn, maybeput in more stuff later, but itll be hard to get it to work.
+if loadWeights:
+    evaluatePoemGeneration(model, tokenizer)
+else:
+    model.fit((trainData, trainMask), epochs = 3, batch_size =2, validation_data = (valData, valMask))
+    model.save_weights("weights")
 tokenized = tf.convert_to_tensor(tokenizer("once upon a midnight dreary")['input_ids'], tf.int32)[tf.newaxis, ...]
 print(tokenized)
 generated = model.generate(tokenized, 10, 30, tokenizer.bos_token_id, tokenizer.eos_token_id, tokenizer.pad_token_id)
@@ -97,6 +101,6 @@ print(generated)
 output =  batch_decode(generated, tokenizer, True, False, False)
 print("output text: ", output)
 
-model.fit((trainData, trainMask), epochs = 3, batch_size =2, validation_data = (valData, valMask))
-model.save_weights("weights")
+
+
 evaluatePoemGeneration(model, tokenizer)
