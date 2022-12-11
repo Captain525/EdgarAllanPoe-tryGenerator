@@ -93,4 +93,4 @@ def runModel(epochs, learningRate, modelNum, special):
         model.fit((trainData, trainMask), epochs = epochs, batch_size =2, validation_data = (valData, valMask))
         model.save_weights("weights")
         evaluatePoemGeneration(model, tokenizer)
-runModel(1, 5e-3, 0, True)
+runModel(10, 5e-3, 0, True)
