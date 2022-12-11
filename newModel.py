@@ -48,9 +48,9 @@ def evaluatePoemGeneration(model, tokenizer):
     avgDiversity = sum/numPoems
     print("lexical diversity: ", avgDiversity)
 
-def runModel(epochs, learningRate, modelNum):
+def runModel(epochs, learningRate, modelNum, special):
     loadWeights = False
-    addSpecial = False
+    addSpecial = special
     text = get_data_poems("data/")
     postprocess= Postprocessing()
     evaluate = Metrics()
@@ -93,4 +93,3 @@ def runModel(epochs, learningRate, modelNum):
         model.fit((trainData, trainMask), epochs = epochs, batch_size =2, validation_data = (valData, valMask))
         model.save_weights("weights")
         evaluatePoemGeneration(model, tokenizer)
-runModel(1, .0001, 0)
