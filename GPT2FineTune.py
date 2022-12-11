@@ -4,19 +4,32 @@ from transformers import TFGPT2Model, TFGPT2LMHeadModel, GPT2Config, PreTrainedM
 import numpy as np
 from EvalMetrics import perplexity
 class GPT2FineTune(tf.keras.Model):
-    def __init__(self, vocab_size, loadWeightsPath=None):
+    def __init__(self, vocab_size, loadWeightsPath=None, modelNum = 0):
         super().__init__()
-        
-        self.addTail =True
-        self.headModel = False
-        self.addEmbedding = True
-        self.doMask =True
+        if modelNum == 0:
+            #EMbedding + GPT + Dense
+            self.addTail =True
+            self.headModel = False
+            self.addEmbedding = True
+            self.doMask =True
+        if modelNum == 1:
+            #embedding + LM GPT
+            self.headModel = True
+            self.addTail = False
+            self.addEmbedding = True
+            self.doMask = True
+        if modelNum == 2:
+            #GPT + Dense
+            self.headModel = False
+            self.addTail = True
+            self.addEmbedding = False
+            self.doMask = True
         """
         Before, using sequential model sfor the head and tail caused everything to break, now it doesn't. 
 
         I think it might be LMHeadModel vs just normal model. LMHeadModel causes it to crash maybe. 
         """
-        
+
         if self.addEmbedding: 
 
             self.embedding = tf.keras.layers.Embedding(vocab_size, 768)
