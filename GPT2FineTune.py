@@ -10,7 +10,7 @@ class GPT2FineTune(tf.keras.Model):
         self.addTail = True
         self.headModel = False
         self.addEmbedding = True
-        self.doMask =False
+        self.doMask =True
         """
         Before, using sequential model sfor the head and tail caused everything to break, now it doesn't. 
 
@@ -179,7 +179,6 @@ class GPT2FineTune(tf.keras.Model):
         difference = 1-sum
         addToEach = difference/probs.shape[-1]
         probs = probs + addToEach
-
         r = tf.expand_dims(tf.random.uniform(shape = (probs.shape[1-axis], )), axis=axis)
         return tf.cast(tf.argmax(tf.math.cumsum(probs, axis=axis)>r, axis=axis), tf.int32)
 

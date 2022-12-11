@@ -21,19 +21,28 @@ def splitData(data, attentionMask):
     validationData =  tf.gather(data, shuffledIndices[numTrain: ])
     validationMask = tf.gather(attentionMask, shuffledIndices[numTrain:])
     return trainData, trainMask, validationData, validationMask
+def countUnique(poem):
+    """
+    Poem as list of words. 
+    """
+    poemArray = np.array(poem)
+    uniqueWords = np.unique(poemArray)
+    lexDiv = uniqueWords.shape[0]/poemArray.shape[0]
+    return lexDiv
 def evaluatePoemGeneration(model, tokenizer):
     min_length = 10
-    max_length = 30
-    lines = generate_lines(model, tokenizer,min_length, max_length, True, False, ["It was a dark and stormy night",None,  "I hated to hear the sound of my beating heart"], 2, 1, True, tokenizer.bos_token_id, tokenizer.eos_token_id, tokenizer.pad_token_id)
+    max_length = 50
+    lines = generate_lines(model, tokenizer,min_length, max_length, True, False, [None, "Once upon a midnight dreary", "The heart beat beneath the floorboards"], 3, 1, True, tokenizer.bos_token_id, tokenizer.eos_token_id, tokenizer.pad_token_id)
     
     print(lines)
-    splitPoems = np.array(breakPoemLines(lines), dtype = str)
+    #splitPoems = np.array(breakPoemLines(lines), dtype = str)
+    splitPoems = breakPoemLines(lines)
     numPoems = len(splitPoems)
     print("split poems: ", splitPoems)
     print(numPoems)
     sum = 0
     for poem in splitPoems:
-        lexicalDiversity= evaluate.lexical_diversity(poem.numpy())
+        lexicalDiversity= countUnique(poem)
         sum+= lexicalDiversity
     avgDiversity = sum/numPoems
     print("lexical diversity: ", avgDiversity)
@@ -67,12 +76,10 @@ else:
 
 
 poems = mergePoems(text, addSpecial)
-print(poems)
+
 encodedText = tokenizeDataset(poems, tokenizer, True, False)
 input_ids = encodedText["input_ids"]
-print("input i ds: ", input_ids)
 attention_mask = encodedText["attention_mask"]
-
 trainData, trainMask, valData, valMask = splitData(input_ids, attention_mask)
 #trainData = input_ids[0:100]
 #valData = input_ids[0:100]
@@ -90,6 +97,6 @@ print(generated)
 output =  batch_decode(generated, tokenizer, True, False, False)
 print("output text: ", output)
 
-model.fit((trainData[0:100], trainMask[0:100]), epochs = 3, batch_size =2, validation_data = (valData, valMask))
+model.fit((trainData, trainMask), epochs = 3, batch_size =2, validation_data = (valData, valMask))
 model.save_weights("weights")
 evaluatePoemGeneration(model, tokenizer)
