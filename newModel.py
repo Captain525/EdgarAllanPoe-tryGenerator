@@ -49,8 +49,14 @@ def evaluatePoemGeneration(model, tokenizer):
     print("lexical diversity: ", avgDiversity)
 
 def runModel(epochs, learningRate, modelNum):
+    """
+    Main method called when you want to run the model. 
+    """
+    #whether to use presaved weights or train new ones. 
     loadWeights = False
+    #whether to add special tokens to the text. 
     addSpecial = False
+    #get poems in list form. 
     text = get_data_poems("data/")
     postprocess= Postprocessing()
     evaluate = Metrics()
@@ -62,7 +68,7 @@ def runModel(epochs, learningRate, modelNum):
      "bos_token": "<BOS>", 
         "eos_token": "<EOS>"
     }
-
+    #make tokenizer. 
     tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
     if addSpecial:
         tokenizer.add_special_tokens(special_tokens)
@@ -71,13 +77,13 @@ def runModel(epochs, learningRate, modelNum):
     if loadWeights:
         model = GPT2FineTune(len(tokenizer), "weights/")
     else:
-        model = GPT2FineTune(len(tokenizer), modelNum = modelNum)
+        model = GPT2FineTune(len(tokenizer),None,  modelNum)
 
 
 
-
+    #merge each poem into one long string. 
     poems = mergePoems(text, addSpecial)
-
+    #convert poems into tokens. 
     encodedText = tokenizeDataset(poems, tokenizer, False, False)
     input_ids = encodedText["input_ids"]
     attention_mask = encodedText["attention_mask"]
@@ -90,6 +96,8 @@ def runModel(epochs, learningRate, modelNum):
     if loadWeights:
         evaluatePoemGeneration(model, tokenizer)
     else:
+        #train. 
         model.fit((trainData, trainMask), epochs = epochs, batch_size =2, validation_data = (valData, valMask))
         model.save_weights("weights")
         evaluatePoemGeneration(model, tokenizer)
+runModel(10, 5e-3, 0)

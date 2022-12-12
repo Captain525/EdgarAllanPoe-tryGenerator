@@ -1,9 +1,7 @@
 from spacy.lang.en import English
-#from spacy.tokenizer import tokenizer
-#from spacy.tokenizer import tokenizer
+
 import string as string_utils
-#import pronouncing
-#import pronouncing
+
 from collections import Counter
 import tensorflow as tf
 def perplexity(probs, text, mask):
@@ -26,8 +24,11 @@ def perplexity(probs, text, mask):
 
 def rhymingDistance(poem):
     """
+    UNUSED
+
     Generally poe uses pairs of rhymes I think, two consecutive lines rhyme. 
     input: Poem as a list of lines, line as list of words.  maybe not line as list of words not sure. 
+    
     """
     nlp = English()
     tokenizer = nlp.tokenizer
@@ -69,6 +70,9 @@ def rhymingDistance(poem):
 
         
 def calculateWordFreq(poems):
+    """
+    UNUSED
+    """
     nlp = English()
     tokenizer = nlp.tokenizer
     oedilf_word_freq = Counter()
@@ -84,6 +88,9 @@ def calculateWordFreq(poems):
 
     return oedilf_word_freq
 def getWordFreq(files):
+    """
+    UNUSED
+    """
     generated_word_freq = Counter()
 
     for filename in files:
@@ -105,6 +112,9 @@ def getWordFreq(files):
     return generated_word_freq
 
 def get_coverage(oedilf_word_freq, generated_word_freq, min_word_freq):
+    """
+    UNUSED 
+    """
     top_words = set()
     for word, count in oedilf_word_freq.most_common():
         if count < min_word_freq:

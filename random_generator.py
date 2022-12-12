@@ -3,6 +3,9 @@ import numpy as np
 import random
 
 class RandomGenerator:
+    """
+    Makes random decisions for words, generates words randomly from vocabList. 
+    """
     def __init__(self, line_range, num_lines):
         # line range is a list of two elements, min number of words per line, and max (can be the same number)
         self.line_min = line_range[0]

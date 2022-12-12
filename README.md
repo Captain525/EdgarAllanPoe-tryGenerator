@@ -11,3 +11,9 @@ Two ways to customize pretrained model:
 
 Why fine tune?: Later layers in the network more specific to the task at hand, whereas earlier layers are more general about language and words. thus, we want to tune the model to our specific task. 
 
+In ours, we freeze the pretrained GPT2 model and add an embedding layer before it and a dense layer with softmax after it. This way, we can avoid the computational problems of training the big model. 
+
+We also do our own generation, using sampling and greedy techniques. 
+
+
+

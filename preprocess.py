@@ -59,7 +59,7 @@ def splitPoem(poemText):
     """
     Split a poem which is too large into smaller chunks. 
     """
-    #listPoemParts = poemText.split(".")
+    
     listIfPeriod = ["." in line for line in poemText]
     indicesTrueList = [0] + [i+1 for i,value in enumerate(listIfPeriod) if value == True]
     listSubPoems = []
@@ -202,7 +202,6 @@ def reverseLineOrder(input_ids, use_bos, tokenizer, reverse_last_line = False):
 
     else:
         start = 0
-    print("sep token: ", tokenizer.sep_token_id)
     for end in range(1, len(tmp_input_ids)):
         
         #iterate through sentence until you reach a sep token. 
@@ -229,7 +228,7 @@ def reverseLineOrder(input_ids, use_bos, tokenizer, reverse_last_line = False):
 
 def tokenizeDataset( batch, tokenizer, use_bos, reverse):
     """
-    Takes in a batch of the dataset, then 
+    Takes in a batch of the dataset, then converts them to tokens. 
     """
     
     if not reverse:

@@ -5,7 +5,9 @@ import os
 class Metrics:
     def __init__(self):
         None
-    
+    """
+    Rewritten in newModel.py
+    """
     def lexical_diversity(self, formatted_poem): # formatted poem from postproccess file
         # remove all tokens and compute TTR
         poem_arr = formatted_poem

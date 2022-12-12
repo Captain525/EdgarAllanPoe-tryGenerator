@@ -4,6 +4,7 @@ import math
 
 def batch_decode(outputs, tokenizer, use_bos, reverse, reverse_last_line):
     """
+    Decodes a batch of outputs from the generate function. 
     Outputs list of python tensors. 
     tokenizer - tokenizer
     use_bos = whether use this token
@@ -41,6 +42,9 @@ def lengths_to_mask(lengths):
 
 
 def get_input_ids(prompt, tokenizer, use_bos, reverse, add_line_token):
+    """
+    UNUSED
+    """
     prompt = prompt.strip()
     if add_line_token:
         if prompt != "" and prompt[-6:] !="<LINE>":
@@ -58,6 +62,7 @@ def generate_both(model, tokenizer,  min_length, max_length, use_bos, reverse, p
     
     """
     Generate/finish one line of the poem. Prompts should be in correct word order. 
+    USED IN GENERATE LINES. 
     """
 
     """
@@ -113,7 +118,12 @@ def generate_both(model, tokenizer,  min_length, max_length, use_bos, reverse, p
             
 
 def generate_lines(model, tokenizer, min_length, max_length, use_bos, reverse, prompts, num_generation, batch_size, add_line_token,  bos_token_id, eos_token_id, pad_token_id):
+    #called to generate stuff. 
     return generate_both(model, tokenizer, min_length, max_length,  use_bos, reverse, prompts, num_generation, batch_size, add_line_token, lines = True,  bos_token_id = bos_token_id, eos_token_id = eos_token_id, pad_token_id = pad_token_id)
+
+"""
+ALL BELOW IS UNUSED. 
+"""
 def generate_poems(model, tokenizer, device, use_bos, reverse, order, prompts, generate_params, num_generation, batch_size, add_line_token):
         return generate_both(model,tokenizer, device, use_bos, reverse, order, prompts, generate_params, num_generation, batch_size, add_line_token, False)
 def generate_new_lines(model, tokenizer, config, prompts, generate_params, num_generation, batch_size):

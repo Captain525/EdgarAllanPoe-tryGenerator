@@ -4,7 +4,15 @@ from transformers import TFGPT2Model, TFGPT2LMHeadModel, GPT2Config, PreTrainedM
 import numpy as np
 from EvalMetrics import perplexity
 class GPT2FineTune(tf.keras.Model):
+
     def __init__(self, vocab_size, loadWeightsPath=None, modelNum = 0):
+
+        """
+        Add tail - whether to add the dense softmax layer to the end. 
+        headModel - whether to use GPT2LMHEad 
+        addEmbedding - Whether to add the embedding layer before GPT. 
+        doMask - whether to use masking. 
+        """
         super().__init__()
         if modelNum == 0:
             #EMbedding + GPT + Dense
@@ -67,7 +75,7 @@ class GPT2FineTune(tf.keras.Model):
 
         assert(labels.shape == (batchSize, sequenceSize))
         assert(logits.shape == (batchSize, sequenceSize, vocabSize))
-        
+        #get rid of first label and 
         labels = labels[:, 1:]
         logits= logits[:,:-1, :]
         mask = mask[:, 1:]
@@ -82,13 +90,13 @@ class GPT2FineTune(tf.keras.Model):
 
     def call(self, inputs, training):
         """
-        inputs right now is JUST the training ids, no mask or labels. 
-        This is shape batchSize x sequenceSize, each element is an tokenized word. 
+        Inputs is a tuple of training tokens and an attention mask. 
         """
         text = inputs[0]
         attention_mask = inputs[1]
         bs = text.shape[0]
         sequenceSize = text.shape[1]
+        #apply mask. Ignore padding tokens. 
         if self.doMask:
             maskedText = attention_mask * text
         else:
@@ -96,7 +104,7 @@ class GPT2FineTune(tf.keras.Model):
             attention_mask = None
         if self.addEmbedding:
             embeddedInputs = self.head(maskedText)
-            
+            #skip transformer embedding layer. 
             outputs = self.transformerBlock(None, inputs_embeds = embeddedInputs, attention_mask = attention_mask)
         else:
             
@@ -113,19 +121,19 @@ class GPT2FineTune(tf.keras.Model):
     def generate(self, input_ids, min_length, max_length, bos_token_id, eos_token_id, pad_token_id):
       
             
-        #set the attention mask if there wasn't one already. Set it equal to just being 0 where pad tokens are. 
-        
-
+        #true as last input does random sampling, false does greedy search. 
         generated = self.getGeneratedText(input_ids, min_length, max_length, bos_token_id, eos_token_id, pad_token_id, True)
         return generated
 
     def getGeneratedText(self, input_ids, min_length, max_length, bos_token_id,eos_token_id, pad_token_id, sample):
         """
-        Generate a new sequence by sampling randomly from the outputted probability distribution from the model. 
-        Iterate through the sequence, generating one new word each time.
+        Generate text either using the greedy search or sampling method, depending on the sample parameter. It does this by 
+        iterating for max Length number of times (or until an EOS token) and picking the last output of the model, then 
+        using those probabilities to get a result. 
         """
 
         lookAtPrev = True
+        #this allows for None inputs ie no prompt. 
         if input_ids is None: 
             input_ids = tf.fill((1, 1), bos_token_id)
         attention_mask = tf.cast(tf.math.not_equal(input_ids, pad_token_id), dtype=tf.int32)
@@ -134,45 +142,46 @@ class GPT2FineTune(tf.keras.Model):
         concatSequence= input_ids
         sequenceEnd = tf.ones(shape = (batchSize, ), dtype = tf.int32)
         maskBos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == bos_token_id), tf.float32)
+        assert(maskBos[bos_token_id] == 0)
         if lookAtPrev: 
+            #mask previous guesses to not make same guess twice. 
             previousGuesses = eos_token_id *tf.ones((batchSize, ), dtype = tf.int32)
             comparison = tf.tile(tf.range(0, self.vocab_size, 1)[tf.newaxis, ...], multiples = (batchSize, 1))
             assert(comparison.shape == (batchSize, self.vocab_size))
-        assert(maskBos[bos_token_id] == 0)
-
         maskEos = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == eos_token_id), tf.float32)
         assert(maskEos[eos_token_id] == 0)
-      
-        
         maskPad = tf.cast(tf.math.logical_not(tf.range(0, self.vocab_size, 1, dtype = tf.int32) == pad_token_id), tf.float32)
-       
         assert(maskPad[pad_token_id] == 0)
-      
+        #iterate and generate a new word each iteration. 
         for i in range(0, max_length):
             attention_mask =tf.cast(tf.math.not_equal(concatSequence, pad_token_id), dtype=tf.int32)
             if lookAtPrev:
                 previous_guess_mask = tf.cast(tf.math.not_equal(comparison, previousGuesses), dtype = tf.float32)
-            logits = self((concatSequence,  attention_mask))
-            assert(logits.shape == (batchSize, concatSequence.shape[1], self.vocab_size))
+            #call the function to get probabilities. 
+            probs = self((concatSequence,  attention_mask))
+            assert(probs.shape == (batchSize, concatSequence.shape[1], self.vocab_size))
             
             #get the max of the LAST logits. 
             #try batch size of one. 
-            log = logits[:, -1, :]
+            log = probs[:, -1, :]
             if(lookAtPrev):
                 log = log*previous_guess_mask
             assert(log.shape == (batchSize, self.vocab_size))
+            #mask the BOS and pad tokens. 
             log = log*maskBos
             log = log*maskPad
             #make it so can't get the end token if less than minimum length. 
             if i<min_length: 
                 log = log*maskEos
             if sample: 
+                #random sampling method. 
                 guessNext = self.randomChoiceProbIndex(log, axis=1)
                 
             else: 
                 guessNext = tf.argmax(log, axis=-1, output_type = tf.int32)
 
             assert(guessNext.shape == (batchSize,))
+            #pick the generated indices if you haven't had end of sequence yet, pick Pad token if you have. 
             chosenIndices = tf.where(tf.cast(sequenceEnd, tf.bool), guessNext, pad_token_id*tf.ones((batchSize, ), dtype = tf.int32))
             #record the previous guesses so they can't guess the same thing 2 times in a row. 
             if(lookAtPrev):
@@ -193,12 +202,14 @@ class GPT2FineTune(tf.keras.Model):
         difference = 1-sum
         addToEach = difference/probs.shape[-1]
         probs = probs + addToEach
+
         r = tf.expand_dims(tf.random.uniform(shape = (probs.shape[1-axis], )), axis=axis)
         return tf.cast(tf.argmax(tf.math.cumsum(probs, axis=axis)>r, axis=axis), tf.int32)
 
     def batch_step(self, inputs, training):
         """
         Batch step, done in both training and testing. 
+        Inputs is a tuple of input_ids and attentionMask. 
         """
       
         with tf.GradientTape() as tape: 
@@ -224,7 +235,6 @@ class GPT2FineTune(tf.keras.Model):
         Doesn't really work and allow us to add tokens to the vocabulary. 
         """
         self.transformerBlock.resize_token_embeddings(size)
-        print("done")
     def save_weights(self, path):
         if(self.addEmbedding):
             self.head.save_weights(path + "/head")
